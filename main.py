@@ -1,6 +1,7 @@
 import pandas as pd 
 import numpy as np 
-import mysql.connector
+import sqlite3 as sq
+# import mysql.connector
 import datetime
 import hashlib
 import fileinput
@@ -12,20 +13,23 @@ import user_creation
 import Art
 import journal
 
-mydb = mysql.connector.connect(
-    host = "localhost",
-    port = 3310,
-    user = "root",
-    passwd = "1234",
-    database = "accounts"
-)
+# mydb = mysql.connector.connect(
+#     host = "localhost",
+#     port = 3310,
+#     user = "root",
+#     passwd = "1234"
+# )
 
-c = mydb.cursor()
+# c = mydb.cursor()
 
 def main():
 
     clear = lambda: os.system('cls')
-    c = mydb.cursor()
+
+    conn = sq.connect("database.db")
+
+    c = conn.cursor()
+
     def replace(file, searchexp, replaceexp):
         for line in fileinput.input(file, inplace=1):
             if searchexp in line:
@@ -39,27 +43,25 @@ def main():
 
 
     class Accounts:
+        
         def __init__(self, name):
-            c = mydb.cursor()
 
-            command = f"""
+            c.execute(f"""
     CREATE TABLE IF NOT EXISTS {name} (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    Debit_date varchar(100) DEFAULT '',
-    Debit_account_name varchar(100) DEFAULT '',
-    Debit_account_amount INT DEFAULT 0,
-    Credit_date varchar(100) DEFAULT '',
-    Credit_account_name varchar(100) DEFAULT '',
-    Credit_account_amount INT DEFAULT 0);"""
-
-            c.execute(command)
-            mydb.commit()
-            mydb.close()
+    Debit_date TEXT DEFAULT '',
+    Debit_account_name TEXT DEFAULT '',
+    Debit_account_amount INTEGER DEFAULT '',
+    Credit_date TEXT DEFAULT '',
+    Credit_account_name TEXT DEFAULT '',
+    Credit_account_amount INTEGER DEFAULT '');""")
+            conn.commit()
+            conn.close()
 
 
 
     def acc(entry):
-        c = mydb.cursor()
+        conn = sq.connect("database.db")
+        c = conn.cursor()
         debit_entry = {}
         credit_entry = {}
         currentDT = datetime.datetime.now()
@@ -91,12 +93,12 @@ def main():
                 
 
     def login():
-        c = mydb.cursor()
+        conn = sq.connect("database.db")
+        c = conn.cursor()
         try:
             clear()
             username = input("Please enter your username: ")
-            command = f"SELECT * FROM user WHERE username = '{username}';"
-            c.execute(command)
+            c.execute("SELECT * FROM user WHERE username = ?;", (username,))
             check = c.fetchone()
             if check == None:
                 print("Username not found. Please try again.")
@@ -106,8 +108,6 @@ def main():
                 password = getpass.getpass("Please enter your password: ", stream=None)
                 password = encoder(password)
                 # find_user = ("SELECT * FROM user WHERE username = ?;")
-                command = f"SELECT * FROM user WHERE username = '{username}' AND password = '{password}';"
-                c.execute(command)
                 check = c.fetchone()
                 if check == None:
                     print("Invalid Password. Try again")
@@ -128,13 +128,13 @@ def main():
                     #     journal.journal(a)
                     # elif choice == '2':
                     #     journal.balance_check(a)
-                    mydb.commit()
-                    mydb.close()
+                    conn.commit()
+                    conn.close()
 
         except KeyboardInterrupt:
             main()
         
-        mydb.close()
+        conn.close()
 
 
     try:
@@ -157,9 +157,8 @@ def main():
     except KeyboardInterrupt:
         Art.ext("Exiting", ".")
 
-    mydb.commit()
-    mydb.close()
+    conn.commit()
+    conn.close()
 
 if __name__ == '__main__':
     main()
-    

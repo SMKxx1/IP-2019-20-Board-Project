@@ -1,6 +1,6 @@
 import pandas as pd 
-import numpy as np
-import mysql.connector
+import numpy as np 
+import sqlite3 as sq
 import datetime
 import hashlib
 import fileinput
@@ -12,15 +12,9 @@ import Art
 
 clear = lambda: os.system('cls')
 
-mydb = mysql.connector.connect(
-    host = "localhost",
-    port = 3310,
-    user = "root",
-    passwd = "1234",
-    database = "accounts"
-)
+conn = sq.connect("database.db")
 
-c = mydb.cursor()
+c = conn.cursor()
 
 def replace(file, searchexp, replaceexp):
     for line in fileinput.input(file, inplace=1):
@@ -36,7 +30,8 @@ def encoder(password):
 
 
 def new_user():
-    c = mydb.cursor()
+    conn = sq.connect("database.db")
+    c = conn.cursor()
     clear()
     found = 0
     password = ''
@@ -68,8 +63,8 @@ def new_user():
         c.execute(command)
         print("User has been created")
         time.sleep(1)
-        mydb.commit()
-        mydb.close()
+        conn.commit()
+        conn.close()
 
     except KeyboardInterrupt:
         Art.ext("Exiting", ".")

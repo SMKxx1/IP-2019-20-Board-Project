@@ -1,6 +1,6 @@
 import pandas as pd 
 import numpy as np 
-import mysql.connector
+import sqlite3 as sq
 import datetime
 import hashlib
 import fileinput
@@ -13,15 +13,8 @@ import Art
 
 clear = lambda: os.system('cls')
 
-mydb = mysql.connector.connect(
-    host = "localhost",
-    port = 3310,
-    user = "root",
-    passwd = "1234",
-    database = "accounts"
-)
-
-c = mydb.cursor()
+conn = sq.connect("database.db")
+c = conn.cursor()
 
 
 def replace(file, searchexp, replaceexp):
@@ -38,7 +31,6 @@ def encoder(password):
 
 class Accounts:
     def __init__(self, name):
-        c = mydb.cursor()
 
         command = f"""
 CREATE TABLE IF NOT EXISTS {name} (
@@ -51,10 +43,21 @@ Credit_account_name varchar(100) DEFAULT '',
 Credit_account_amount INT DEFAULT 0);"""
 
         c.execute(command)
+        c.execute(f"""
+    CREATE TABLE IF NOT EXISTS {name} (
+    Debit_date TEXT DEFAULT '',
+    Debit_account_name TEXT DEFAULT '',
+    Debit_account_amount INTEGER DEFAULT '',
+    Credit_date TEXT DEFAULT '',
+    Credit_account_name TEXT DEFAULT '',
+    Credit_account_amount INTEGER DEFAULT '');""")
 
 
 def acc(entry, userid):
     c = mydb.cursor()
+    conn = sq.connect("database.db")
+    c = conn.cursor()
+
     debit_entry = {}
     credit_entry = {}
     currentDT = datetime.datetime.now()
@@ -87,24 +90,15 @@ def acc(entry, userid):
                 c.execute(command)
     except IndexError:
         print("Error in entry.")
-    mydb.commit()
-     
+    conn.commit()
+    conn.close()
 
 def balance_check(userid):
-    command = f"show tables where Tables_in_accounts like '%{userid}';"
-    c.execute(command)
-    lst = c.fetchall()
     for i in lst:
-        i = str(i[0])
-        command = f"SELECT * FROM {i};"
-        c.execute(command)
         a = c.fetchall()
         debit_count = credit_count = 0
         for j in a:
-            if j[3] != None:
-                debit_count += j[3]
             else:
-                credit_count += j[6]
         balance = debit_count - credit_count
         nature = ''
         if balance > 0:
@@ -112,10 +106,6 @@ def balance_check(userid):
         elif balance < 0:
             balance = balance*-1
             nature = 'Credit'
-        i = i.replace(userid, '')
-        if balance != 0:
-            print(f"{i} = {balance} {nature}")
-            print()
     input()
     clear()
     journal(userid)
